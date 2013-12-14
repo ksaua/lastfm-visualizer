@@ -16,12 +16,17 @@
         (Scrobble. 3 "Artist1")
         (Scrobble. 4 "Artist1")
         (Scrobble. 4 "Artist1") 
-        (Scrobble. 5 "Artist2")))
+        (Scrobble. 5 "Artist2")
+        (Scrobble. 5 "Artist1")
+        (Scrobble. 5 "Artist3")
+        (Scrobble. 6 "Artist3")
+        (Scrobble. 6 "Artist3")
+        (Scrobble. 7 "Artist4")))
 
 
 (defn group-plays
   "Takes in scrobbles and returns a list like this:
-   {:Artist1 [1 3 4] :Artist2 [2 5]}"
+   {Artist1 [1 3 4], Artist2 [2 5]}"
   [scrobbles]
   (loop [scrobbles scrobbles
          hash-map {}]
@@ -29,10 +34,10 @@
       hash-map
       (recur (rest scrobbles)
              (let [scrobble (first scrobbles)
-                   artist (keyword (:artist scrobble))
+                   artist (:artist scrobble)
                    time (:time scrobble)
                    ; Set current-squence to empty if none exists
-                   current-sequence (if-nil (artist hash-map) [])]
+                   current-sequence (if-nil (get hash-map artist) [])]
                (assoc hash-map artist 
                       (conj current-sequence time)))))))
 
@@ -51,7 +56,7 @@
 
 (defn count-groups
   "Takes in grouped scrobbles and returns a list like:
-   {:Artist1 {1 1, 3 1, 4 2} :Artist2 {2 1, 5 1}}"
+   {Artist1 {1 1, 3 1, 4 2}, Artist2 {2 1, 5 1}}"
   [group-map]
   (functor/fmap count-similar group-map))
 
@@ -73,3 +78,25 @@
   (-> scrobbles 
       group-plays
       count-groups))
+
+(defn hashmap-combo-key
+  [string1 string2]
+  (if (= (compare string1 string2) 1)
+    (list string1 string2)
+    (list string2 string1)))
+
+
+(defn combo-distances
+  [play-seqs]
+  (->> (combo/combinations (keys play-seqs) 2)
+       (map 
+        (fn [[a b]]
+          [(hashmap-combo-key a b)
+           (min-distance (get play-seqs a) (get play-seqs b))]))
+       (into {})))
+
+(defn main
+  []
+  (let [play-sequences (generate-play-sequence scrobbles)
+        combo-distances (combo-distances play-sequences)]
+    combo-distances))
