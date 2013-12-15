@@ -13,10 +13,12 @@
 (def scrobbles 
   (list (Scrobble. 1 "Artist1")
         (Scrobble. 2 "Artist2")
+        (Scrobble. 2 "Artist4")
         (Scrobble. 3 "Artist1")
         (Scrobble. 4 "Artist1")
         (Scrobble. 4 "Artist1") 
         (Scrobble. 5 "Artist2")
+        (Scrobble. 5 "Artist1")
         (Scrobble. 5 "Artist1")
         (Scrobble. 5 "Artist3")
         (Scrobble. 6 "Artist3")
@@ -24,60 +26,24 @@
         (Scrobble. 7 "Artist4")))
 
 
-(defn group-plays
-  "Takes in scrobbles and returns a list like this:
-   {Artist1 [1 3 4], Artist2 [2 5]}"
+(defn generate-play-seqs
+  "Takes in scrobbles and returns a map like this:
+   {Artist1 {1 1, 3 1, 4 1}, Artist2 {2 1, 5 1}}"
   [scrobbles]
-  (loop [scrobbles scrobbles
-         hash-map {}]
-    (if (empty? scrobbles)
-      hash-map
-      (recur (rest scrobbles)
-             (let [scrobble (first scrobbles)
-                   artist (:artist scrobble)
-                   time (:time scrobble)
-                   ; Set current-squence to empty if none exists
-                   current-sequence (if-nil (get hash-map artist) [])]
-               (assoc hash-map artist 
-                      (conj current-sequence time)))))))
-
-(defn count-similar
-  "Takes a list [1 2 2 3 4 4 4] and
-   returns a hash-map like {1 1, 2 2, 3 1, 4 3}"
-  [lst]
-  (loop [lst lst
-         hash-map {}]
-    (if (empty? lst)
-      hash-map
-      (recur (rest lst)
-             (let [key (first lst)
-                   prev-value (if-nil (get hash-map key) 0)]
-               (assoc hash-map key (inc prev-value)))))))
-
-(defn count-groups
-  "Takes in grouped scrobbles and returns a list like:
-   {Artist1 {1 1, 3 1, 4 2}, Artist2 {2 1, 5 1}}"
-  [group-map]
-  (functor/fmap count-similar group-map))
+  (->> (group-by :artist scrobbles)
+       (functor/fmap #(frequencies (map :time %)))))
 
 
 (defn min-distance 
   "Takes two hash-maps {1 1, 3 1, 4 2} and {1 1, 5 1}, interpreting the key as a timeslot and the value as the radius for a circle, and finding the minimum amount of distance needed between circles over time for them not to overlap"
   [r1s r2s]
   (let [timeslots1 (set (keys r1s))
-        timeslots2 (set (keys r2s))
-        ; Find common time slots
-        common-timeslots (set/intersection timeslots1 timeslots2)
+        timeslots2 (set (keys r2s))]
+    (->>
+     (set/intersection timeslots1 timeslots2) ; Find common time slots
+     (map #(+ (get r1s %1) (get r2s %1)))     ; Calculate min distance within a timeslot 
+     (apply max 0))))
 
-        ; Calculate min distance within a timeslot 
-        distances (map #(+ (get r1s %1) (get r2s %1)) common-timeslots)]
-    (apply max 0 distances)))
-
-(defn generate-play-sequence
-  [scrobbles]
-  (-> scrobbles 
-      group-plays
-      count-groups))
 
 (defn hashmap-combo-key
   [string1 string2]
@@ -95,8 +61,72 @@
            (min-distance (get play-seqs a) (get play-seqs b))]))
        (into {})))
 
+
+
+(def positions
+  (reductions
+   (fn [[x y] [dx dy]] [(+ x dx) (+ y dy)])
+   (dPos-seq)))
+
+(defn dPos
+  [n]
+  (if (= n 0)
+    (list [0 0])
+    (let [x (int (Math/pow -1 (dec n)))]
+      (concat (repeat n [x 0]) (repeat n [0 x])))))
+
+(defn dPos-seq
+  "Lazy sequence for dPos"
+  ([] (dPos-seq 0))
+  ([n] (lazy-cat (dPos n) (dPos-seq (inc n)))))
+
+(defn circle-collides?
+  [x1 y1 x2 y2 maks-collision-distance]
+  (> (Math/pow maks-collision-distance 2)
+     (+ 
+      (Math/pow (- x1 x2) 2)
+      (Math/pow (- y1 y2) 2))))
+
+(defn pos-available?
+  [pos play-seq other-seqs combo-distances]
+  (letfn [(collides? [other-seq-key]
+            (let [other-seq (get other-seqs other-seq-key)
+                  [x1 y1] pos
+                  [x2 y2] (:position other-seq)
+                  key (hashmap-combo-key
+                       (first (keys play-seq))
+                       other-seq-key)
+                  collision-distance (get combo-distances key)]
+              (circle-collides? x1 y1 x2 y2 collision-distance)))]
+    (every? (comp not collides?) (keys other-seqs))))
+
+(defn find-first
+  "Returns the first element in seq which (func el) returns true"
+  [func seq]
+  (first (drop-while (comp not func) seq)))
+
+(defn find-position
+  [play-seq other-seqs combo-distances]
+  (find-first
+   #(pos-available? % play-seq other-seqs combo-distances)
+   positions))
+
+(defn place-play-seqs
+  [play-seqs combo-distances]
+  (loop [placed-seqs []
+         not-placed-seqs play-seqs]
+    (let [current-key (first (keys not-placed-seqs))
+          current-seq (get not-placed-seqs current-key)
+          new-position (find-position current-seq placed-seqs combo-distances)]
+      (if (empty? not-placed-seqs)
+        placed-seqs
+        (recur (conj placed-seqs
+                     (assoc current-seq :position new-position))
+               (dissoc not-placed-seqs current-key))))))
+
+
 (defn main
   []
-  (let [play-sequences (generate-play-sequence scrobbles)
-        combo-distances (combo-distances play-sequences)]
-    combo-distances))
+  (let [play-seqs (generate-play-seqs scrobbles)
+        combo-distances (combo-distances play-seqs)]
+    (place-play-seqs play-seqs combo-distances)))
