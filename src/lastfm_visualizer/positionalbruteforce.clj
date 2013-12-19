@@ -1,63 +1,6 @@
-(ns lastfm-visualizer.core
-  (:require [clojure.algo.generic.functor :as functor])
-  (:require [clojure.set :as set])
-  (:require [clojure.math.combinatorics :as combo]))
-
-(defn if-nil [a b]
-  (if (nil? a)
-    b
-    a))
-
-(defrecord Scrobble [time artist])
-(defrecord PlaySequence [artist plays position])
-
-(def scrobbles 
-  (list (Scrobble. 1 "Artist1")
-        (Scrobble. 2 "Artist2")
-        (Scrobble. 2 "Artist4")
-        (Scrobble. 3 "Artist1")
-        (Scrobble. 4 "Artist1")
-        (Scrobble. 4 "Artist1") 
-        (Scrobble. 5 "Artist2")
-        (Scrobble. 5 "Artist1")
-        (Scrobble. 5 "Artist1")
-        (Scrobble. 5 "Artist3")
-        (Scrobble. 6 "Artist3")
-        (Scrobble. 6 "Artist3")
-        (Scrobble. 7 "Artist4")
-        (Scrobble. 5 "Artist4")
-        (Scrobble. 7 "Artist5")
-        (Scrobble. 7 "Artist2")
-        (Scrobble. 7 "Artist3")
-        (Scrobble. 10 "Artist4")
-        (Scrobble. 11 "Artist4")
-        (Scrobble. 13 "Artist4")
-        (Scrobble. 14 "Artist4")
-        (Scrobble. 15 "Artist4")
-        (Scrobble. 23 "Artist4")))
-
-
-(defn generate-play-seqs
-  "Takes in scrobbles and returns list of playsequences"
-  [scrobbles]
-  (->> (group-by :artist scrobbles)
-       (functor/fmap #(frequencies (map :time %)))
-       (seq)
-       (map (fn [[artist plays]] (PlaySequence. artist plays (list 0 0))))))
-
-
-(defn min-distance 
-  "Takes two play sequences finding the minimum amount of distance needed between them over time for them not to overlap"
-  [playseq1 playseq2]
-  (let [plays1 (:plays playseq1)
-        plays2 (:plays playseq2)
-        timeslots1 (set (keys plays1))
-        timeslots2 (set (keys plays2))]
-    (->>
-     (set/intersection timeslots1 timeslots2) ; Find common time slots
-     (map #(+ (get plays1 %1) (get plays2 %1)))     ; Calculate min distance within a timeslot 
-     (apply max 0))))
-
+(ns lastfm-visualizer.positionalbruteforce
+  (:use [clojure.set :only [intersection]])
+  (:use [clojure.math.combinatorics :only [combinations]]))
 
 (defn hashmap-combo-key
   [playseq1 playseq2]
@@ -67,15 +10,31 @@
       (list artist1 artist2)
       (list artist2 artist1))))
 
+(defn min-distance 
+  "Takes two play sequences finding the minimum amount of distance needed between them over time for them not to overlap"
+  [playseq1 playseq2]
+  (let [plays1 (:plays playseq1)
+        plays2 (:plays playseq2)
+        timeslots1 (set (keys plays1))
+        timeslots2 (set (keys plays2))]
+    (->>
+     (intersection timeslots1 timeslots2) ; Find common time slots
+     (map #(+ (get plays1 %1) (get plays2 %1)))     ; Calculate min distance within a timeslot 
+     (apply max 0))))
+
 
 (defn combo-distances
   [play-seqs]
-  (->> (combo/combinations (range (count play-seqs)) 2) ; Find combination of indices
+  (->> (combinations (range (count play-seqs)) 2) ; Find combination of indices
        (map 
         (fn [[index-a index-b]]
           [(hashmap-combo-key (nth play-seqs index-a) (nth play-seqs index-b))
            (min-distance (nth play-seqs index-a) (nth play-seqs index-b))]))
        (into {})))
+
+
+
+
 
 (defn dPos
   [n]
@@ -125,7 +84,7 @@
    #(pos-available? % play-seq other-seqs combo-distances)
    positions))
 
-(defn place-play-seqs
+(defn bruteforce-place-play-seqs
   [play-seqs combo-distances]
   (loop [placed-seqs []
          not-placed-seqs play-seqs]
@@ -136,10 +95,3 @@
         (recur (conj placed-seqs
                      (assoc current-seq :position new-position))
                (rest not-placed-seqs))))))
-
-
-(defn main
-  []
-  (let [play-seqs (generate-play-seqs scrobbles)
-        combo-distances (combo-distances play-seqs)]
-    (place-play-seqs play-seqs combo-distances)))
