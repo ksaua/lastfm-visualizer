@@ -7,4 +7,5 @@
                  [org.clojure/algo.generic "0.1.1"]
                  [org.clojure/tools.trace "0.7.5"]
                  [org.clojure/math.combinatorics "0.0.7"]
+                 [org.clojure/data.json "0.2.3"]
                  ])
