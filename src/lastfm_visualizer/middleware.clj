@@ -2,11 +2,15 @@
 
 (defn weighted-plays
   [[time plays]]
-  {(- time 2) (/ plays 3)
-   (- time 1) (/ plays 1.5)
+  {(- time 4) (/ plays 12)
+   (- time 3) (/ plays 6)
+   (- time 2) (/ plays 3)
+   (- time 1) (/ plays 3/2)
       time       plays
-   (+ time 1) (/ plays 1.5)
-   (+ time 2) (/ plays 3)})
+   (+ time 1) (/ plays 3/2)
+   (+ time 2) (/ plays 3)
+   (+ time 3) (/ plays 6)
+   (+ time 4) (/ plays 12)})
 
 (defn weighted-play-seq
   [play-seq]
@@ -20,3 +24,6 @@
         grouped-time (quot current-time dataseconds-per-videoframe)]
     (assoc scrobble :time grouped-time)))
 
+(defn min-scrobbles
+  [minimum play-seqs]
+  (filter #(> (reduce + (vals (:plays %))) minimum) play-seqs))

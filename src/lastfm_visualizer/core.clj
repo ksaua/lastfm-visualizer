@@ -3,7 +3,8 @@
   (:use [lastfm-visualizer.position-algorithm.bruteforce-circle :only [place-play-seqs]])
   (:use [lastfm-visualizer.json-scrobble-parser :only [parse-json-file]])
   (:use [lastfm-visualizer.middleware :only [weighted-play-seq
-                                             group-scrobbles-in-same-frame]])
+                                             group-scrobbles-in-same-frame
+                                             min-scrobbles]])
   (:use [clojure.algo.generic.functor :only [fmap]])
   (:gen-class))
 
@@ -20,6 +21,7 @@
         (apply concat)
         (map #(group-scrobbles-in-same-frame % data-seconds-per-video-frame))
         (generate-play-seqs)
+        (min-scrobbles 10)
         (map weighted-play-seq)
         (place-play-seqs))))
 
