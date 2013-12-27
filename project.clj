@@ -1,5 +1,5 @@
 (defproject lastfm-visualizer "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
+  :description "Generates .png files from lastfm export data"
   :url "http://github.com/ksaua/lastfm-visualizer"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}

@@ -1,13 +1,13 @@
 # lastfm-visualizer
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure program which generates png files from last.fm export data
 
 ## Usage
 
-FIXME
+lein run /path/to/scrobbles.*.json
 
 ## License
 
-Copyright © 2013 FIXME
+Copyright © 2013 Knut Saua Mathiesen
 
 Distributed under the Eclipse Public License, the same as Clojure.
