@@ -6,7 +6,7 @@
   [playseq1 playseq2]
   (let [artist1 (:artist playseq1)
         artist2 (:artist playseq2)]
-    (if (= (compare artist1 artist2 ) 1)
+    (if (> (compare artist1 artist2 ) 0)
       (list artist1 artist2)
       (list artist2 artist1))))
 

@@ -2,15 +2,15 @@
 
 (defn weighted-plays
   [[time plays]]
-  {(- time 4) (/ plays 12)
-   (- time 3) (/ plays 6)
-   (- time 2) (/ plays 3)
-   (- time 1) (/ plays 3/2)
-      time       plays
-   (+ time 1) (/ plays 3/2)
-   (+ time 2) (/ plays 3)
-   (+ time 3) (/ plays 6)
-   (+ time 4) (/ plays 12)})
+  {(- time 4) (/ plays 12.0)
+   (- time 3) (/ plays 6.0)
+   (- time 2) (/ plays 3.0)
+   (- time 1) (/ plays 1.5)
+      time    (/ plays 1.0)
+   (+ time 1) (/ plays 1.5)
+   (+ time 2) (/ plays 3.0)
+   (+ time 3) (/ plays 6.0)
+   (+ time 4) (/ plays 12.0)})
 
 (defn weighted-play-seq
   [play-seq]

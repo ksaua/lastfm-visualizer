@@ -1,11 +1,11 @@
 (ns lastfm-visualizer.core
-  (:use [lastfm-visualizer.playsequence :only [generate-play-seqs]])
-  (:use [lastfm-visualizer.position-algorithm.bruteforce-circle :only [place-play-seqs]])
-  (:use [lastfm-visualizer.json-scrobble-parser :only [parse-json-file]])
-  (:use [lastfm-visualizer.middleware :only [weighted-play-seq
-                                             group-scrobbles-in-same-frame
-                                             min-scrobbles]])
-  (:use [clojure.algo.generic.functor :only [fmap]])
+  (:require [lastfm-visualizer.playsequence :refer [generate-play-seqs]])
+  (:require [lastfm-visualizer.position-algorithm.bruteforce-circle :refer [place-play-seqs]])
+  (:require [lastfm-visualizer.json-scrobble-parser :refer [parse-json-file]])
+  (:require [lastfm-visualizer.middleware :refer [weighted-play-seq
+                                                  group-scrobbles-in-same-frame
+                                                  min-scrobbles]])
+  (:require [lastfm-visualizer.png-renderer :refer [render]])
   (:gen-class))
 
 (def video-fps 30)
@@ -23,7 +23,10 @@
         (generate-play-seqs)
         (min-scrobbles 10)
         (map weighted-play-seq)
-        (place-play-seqs))))
+        (place-play-seqs)
+        ((fn [seqs] (do (println seqs) seqs)))
+        ((fn [seqs] (render "/home/knut/.viz" 800 600 seqs 1))))))
+
 
 (defn -main
   [& filepaths]
